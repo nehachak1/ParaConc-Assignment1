@@ -41,8 +41,25 @@ int main (int argc, const char *argv[]) {
 
 double integrate (int num_threads, int samples, int a, int b, double (*f)(double)) {
     double integral;
+    int width = (b - a);
+    
 
-    /* Your code goes here */
+    if(num_threads < 1 || samples < 1 || a >= b || a == b){return 0.0;}
+    if(f == NULL){return 0.0;}
 
+    #pragma omp parallel num_threads(num_threads)
+    {
+        unsigned int seed = omp_get_thread_num() + 381189; 
+
+        #pragma omp for reduction(+:integral)
+        for(int i = 0; i < samples; i++){
+            double random_x = a + (rand_r(&seed) / (double)RAND_MAX) * width; 
+            double height = f(random_x);
+            integral += height * width / samples;
+        }
+    }
+
+        
+    
     return integral;
 }
