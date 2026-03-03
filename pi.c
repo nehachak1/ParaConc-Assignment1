@@ -64,7 +64,7 @@ double calculate_pi (int num_threads, int samples) {
             if (r2 <= 1.0) inside++;
         }
 
-        // rees memory for the current thread’s random generator
+        // frees memory for the current thread’s random generator
         free_rand(gen);
     }
 
