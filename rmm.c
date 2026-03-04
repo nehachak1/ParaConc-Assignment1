@@ -1,13 +1,14 @@
 /*
 ============================================================================
 Filename    : rmm.c
-Author      : Your names goes here
-SCIPER		: Your SCIPER numbers
+Author      : Neha Chakraborty & Guillaume Marie Lepin
+SCIPER		: 373384 & 381189
 ============================================================================
 */
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <omp.h>
 #include "utility.h"
 
 int main(int argc, char *argv[]) {
@@ -43,19 +44,41 @@ int main(int argc, char *argv[]) {
     }
 
     /* Step 3: Computes the matrix C as the RMM of matrices A and B. */
+
     /* Parallelize and optimize this part only! */
     printf("Starting Computation...\n");
     set_clock();
+
+    omp_set_num_threads(num_threads);
+
+                             // parallelizes both loops as one large iteration
+    #pragma omp parallel for collapse(2)
     for(int idx = 0; idx < M/2; idx++) {
         for(int jdx = 0; jdx < K/2; jdx++) {
-            matC[idx][jdx] = 0;
-            for(int aoff = 0; aoff < 2; aoff++) {
-                for(int boff = 0; boff < 2; boff++) {
-                    for(int kdx = 0; kdx < N; kdx++) {
-                        matC[idx][jdx] += matA[idx*2 + aoff][kdx] * matB[kdx][jdx*2 + boff];
-                    }
-                }
+
+            // row pointers for A because otherwise loop would repeatedly comupte the address
+            int *A0 = matA[idx*2];
+            int *A1 = matA[idx*2 + 1];
+
+            // two columns in B 
+            int col0 = jdx*2;
+            int col1 = col0 + 1;
+
+            int sum = 0;
+
+            // 4 dot-products worth of multiplies/adds (
+            for(int kdx = 0; kdx < N; kdx++) {
+                int b0 = matB[kdx][col0];
+                int b1 = matB[kdx][col1];
+
+                sum += A0[kdx] * b0;
+                sum += A0[kdx] * b1;
+                sum += A1[kdx] * b0;
+                sum += A1[kdx] * b1;
             }
+
+            matC[idx][jdx] = sum;
+
         }
     }
     double totaltime = elapsed_time();
