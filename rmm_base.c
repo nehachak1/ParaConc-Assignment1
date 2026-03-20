@@ -1,14 +1,13 @@
 /*
 ============================================================================
 Filename    : rmm.c
-Author      : Neha Chakraborty & Guillaume Marie Lepin
-SCIPER		: 373384 & 381189
+Author      : Your names goes here
+SCIPER		: Your SCIPER numbers
 ============================================================================
 */
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <omp.h>
 #include "utility.h"
 
 int main(int argc, char *argv[]) {
@@ -44,29 +43,20 @@ int main(int argc, char *argv[]) {
     }
 
     /* Step 3: Computes the matrix C as the RMM of matrices A and B. */
-
     /* Parallelize and optimize this part only! */
     printf("Starting Computation...\n");
     set_clock();
-
-    omp_set_num_threads(num_threads);
-
-    #pragma omp parallel for
     for(int idx = 0; idx < M/2; idx++) {
-    for(int jdx = 0; jdx < K/2; jdx++) {
-
-        int sum = 0;
-
-        for(int kdx = 0; kdx < N; kdx++) {
+        for(int jdx = 0; jdx < K/2; jdx++) {
+            matC[idx][jdx] = 0;
             for(int aoff = 0; aoff < 2; aoff++) {
                 for(int boff = 0; boff < 2; boff++) {
-                    sum += matA[idx*2 + aoff][kdx] * matB[kdx][jdx*2 + boff];
+                    for(int kdx = 0; kdx < N; kdx++) {
+                        matC[idx][jdx] += matA[idx*2 + aoff][kdx] * matB[kdx][jdx*2 + boff];
+                    }
                 }
             }
         }
-
-        matC[idx][jdx] = sum;
-    }
     }
     double totaltime = elapsed_time();
 

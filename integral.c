@@ -1,8 +1,8 @@
 /*
 ============================================================================
 Filename    : integral.c
-Author      : Your names goes here
-SCIPER		: Your SCIPER numbers
+Author      : Neha Chakraborty & Guillaume Marie Lepin
+SCIPER		: 373384 & 381189
 ============================================================================
 */
 
