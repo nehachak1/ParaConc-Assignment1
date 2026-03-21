@@ -33,12 +33,57 @@ int main (int argc, const char *argv[]) {
 
 /* Parallelize and optimise this function */
 int perform_buckets_computation(int num_threads, int num_samples, int num_buckets) {    
-    volatile int *histogram = (int*) calloc(num_buckets, sizeof(int));
-    rand_gen generator = init_rand(0);
-    for(int i = 0; i < num_samples; i++){
-        int val = next_rand(generator) * num_buckets;
-        histogram[val]++;
+    int *histogram = (int*) calloc(num_buckets, sizeof(int));
+    if (histogram == NULL) return 1;
+
+    #pragma omp parallel num_threads(num_threads)
+    {
+        int thread_id = omp_get_thread_num();
+        rand_gen generator = init_rand(thread_id);
+
+        int *local_histogram = (int*) calloc(num_buckets, sizeof(int));
+        if (local_histogram == NULL) exit(1);
+
+        #pragma omp for
+        for (int i = 0; i < num_samples; i++) {
+            int val = next_rand(generator) * num_buckets;
+            local_histogram[val]++;
+        }
+
+        free_rand(generator);
+
+        
+    
+        for (int b = 0; b < num_buckets; b++) {
+            #pragma omp atomic
+            histogram[b] += local_histogram[b];
+        }
+        
+
+        free(local_histogram);
     }
-    free_rand(generator);
+
+    free(histogram);
     return 0;
 }
+
+/* Parallelize and optimise this function 
+int perform_buckets_computation(int num_threads, int num_samples, int num_buckets) {    
+    volatile int *histogram = (int*) calloc(num_buckets, sizeof(int));
+
+    #pragma omp parallel num_threads(num_threads)
+    {
+        unsigned int thread_id = omp_get_thread_num();
+        rand_gen generator = init_rand(thread_id);
+        
+        #pragma omp for 
+        for(int i = 0; i < num_samples; i++){
+            int val = next_rand(generator) * num_buckets;
+            #pragma omp atomic
+            histogram[val]++;
+        }
+        free_rand(generator);
+    }
+    return 0;
+}*/
+
