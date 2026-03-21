@@ -46,9 +46,7 @@ int main(int argc, char *argv[]) {
     /* Step 3: Optimized RMM computation */
     printf("Starting Computation...\n");
     set_clock();
- 
-    omp_set_num_threads(num_threads);
- 
+
     #pragma omp parallel for schedule(static)
     for (int idx = 0; idx < M/2; idx++) {
         int *A0 = matA[2 * idx];
@@ -60,7 +58,6 @@ int main(int argc, char *argv[]) {
             int col1 = col0 + 1;
             int sum = 0;
 
-            #pragma omp simd reduction(+:sum)
             for (int kdx = 0; kdx < N; kdx++) {
                 int a = A0[kdx] + A1[kdx];
                 int b = matB[kdx][col0] + matB[kdx][col1];
@@ -70,7 +67,7 @@ int main(int argc, char *argv[]) {
             Crow[jdx] = sum;
         }
     }
- 
+
     double totaltime = elapsed_time();
  
     /* Step 4: Output */
