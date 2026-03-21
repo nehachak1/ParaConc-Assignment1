@@ -44,19 +44,21 @@ double integrate (int num_threads, int samples, int a, int b, double (*f)(double
     int width = (b - a);
     
 
-    if(num_threads < 1 || samples < 1 || a >= b || a == b){return 0.0;}
-    if(f == NULL){return 0.0;}
+    //if(num_threads < 1 || samples < 1 || a >= b || a == b){return 0.0;}
+    //if(f == NULL){return 0.0;}
 
     #pragma omp parallel num_threads(num_threads)
     {
-        unsigned int seed = omp_get_thread_num() + 381189; 
+        unsigned int thread_id = omp_get_thread_num();
+        rand_gen generator = init_rand(thread_id);
 
         #pragma omp for reduction(+:integral)
         for(int i = 0; i < samples; i++){
-            double random_x = a + (rand_r(&seed) / (double)RAND_MAX) * width; 
+            double random_x = a + (next_rand(generator) / (double)RAND_MAX) * width; 
             double height = f(random_x);
             integral += height * width / samples;
         }
+        free_rand(generator);
     }
 
         
