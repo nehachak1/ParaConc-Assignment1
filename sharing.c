@@ -1,6 +1,6 @@
 /*
 ============================================================================
-Filename    : integral.c
+Filename    : sharing.c
 Author      : Neha Chakraborty & Guillaume Marie Lepin
 SCIPER		: 373384 & 381189
 ============================================================================
@@ -9,58 +9,64 @@ SCIPER		: 373384 & 381189
 #include <stdio.h>
 #include <stdlib.h>
 #include "utility.h"
-#include "function.c"
 
-double integrate (int num_threads, int samples, int a, int b, double (*f)(double));
+int perform_buckets_computation(int, int, int);
 
 int main (int argc, const char *argv[]) {
+    int num_threads, num_samples, num_buckets;
 
-    int num_threads, num_samples, a, b;
-    double integral;
-
-    if (argc != 5) {
-		printf("Invalid input! Usage: ./integral <num_threads> <num_samples> <a> <b>\n");
+    if (argc != 4) {
+		printf("Invalid input! Usage: ./sharing <num_threads> <num_samples> <num_buckets> \n");
 		return 1;
 	} else {
         num_threads = atoi(argv[1]);
         num_samples = atoi(argv[2]);
-        a = atoi(argv[3]);
-        b = atoi(argv[4]);
+        num_buckets = atoi(argv[3]);
 	}
 
     set_clock();
+    perform_buckets_computation(num_threads, num_samples, num_buckets);
 
-    /* You can use your self-defined funtions by replacing identity_f. */
-    integral = integrate (num_threads, num_samples, a, b, identity_f);
-
-    printf("- Using %d threads: integral on [%d,%d] = %.15g computed in %.4gs.\n", num_threads, a, b, integral, elapsed_time());
-
+    printf("Using %d threads: %d operations completed in %.4gs.\n", num_threads, num_samples, elapsed_time());
     return 0;
 }
 
 
-double integrate (int num_threads, int samples, int a, int b, double (*f)(double)) {
-    double integral;
-    int width = (b - a);
-    
+int perform_buckets_computation(int num_threads, int num_samples, int num_buckets) {    
+    int *histogram = (int*) calloc(num_buckets, sizeof(int));
+    if (histogram == NULL) return 1;
 
-    if(num_threads < 1 || samples < 1 || a >= b || a == b){return 0.0;}
-    if(f == NULL){return 0.0;}
 
     #pragma omp parallel num_threads(num_threads)
     {
-        unsigned int seed = omp_get_thread_num() + 381189; 
+        int thread_id = omp_get_thread_num();
+        rand_gen generator = init_rand(thread_id);
 
-        #pragma omp for reduction(+:integral)
-        for(int i = 0; i < samples; i++){
-            double random_x = a + (rand_r(&seed) / (double)RAND_MAX) * width; 
-            double height = f(random_x);
-            integral += height * width / samples;
+        int *local_histogram = (int*) calloc(num_buckets, sizeof(int));
+        if (local_histogram == NULL) exit(1);
+
+        #pragma omp for
+        for (int i = 0; i < num_samples; i++) {
+            int val = next_rand(generator) * num_buckets;
+            local_histogram[val]++;
         }
-    }
+
+        free_rand(generator);
 
         
     
-    return integral;
+        for (int b = 0; b < num_buckets; b++) {
+            #pragma omp atomic
+            histogram[b] += local_histogram[b];
+        }
+        
+
+        free(local_histogram);
+    }
+
+    free(histogram);
+    return 0;
 }
+
+
 

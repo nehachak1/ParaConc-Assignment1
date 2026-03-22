@@ -46,28 +46,40 @@ int main(int argc, char *argv[]) {
     /* Step 3: Optimized RMM computation */
     printf("Starting Computation...\n");
     set_clock();
-
-    #pragma omp parallel for schedule(static)
-    for (int idx = 0; idx < M/2; idx++) {
-        int *A0 = matA[2 * idx];
-        int *A1 = matA[2 * idx + 1];
-        int *Crow = matC[idx];
-
-        for (int jdx = 0; jdx < K/2; jdx++) {
-            int col0 = 2 * jdx;
+ 
+    omp_set_num_threads(num_threads);
+ 
+    #pragma omp parallel for collapse(2)
+    for(int idx = 0; idx < M/2; idx++) {
+        for(int jdx = 0; jdx < K/2; jdx++) {
+ 
+            int *A0 = matA[2*idx];
+            int *A1 = matA[2*idx + 1];
+ 
+            int col0 = 2*jdx;
             int col1 = col0 + 1;
+ 
             int sum = 0;
-
-            for (int kdx = 0; kdx < N; kdx++) {
-                int a = A0[kdx] + A1[kdx];
-                int b = matB[kdx][col0] + matB[kdx][col1];
-                sum += a * b;
+ 
+            #pragma omp simd reduction(+:sum)
+            for(int kdx = 0; kdx < N; kdx++) {
+ 
+                int a0 = A0[kdx];
+                int a1 = A1[kdx];
+ 
+                int b0 = matB[kdx][col0];
+                int b1 = matB[kdx][col1];
+ 
+                sum += a0 * b0;
+                sum += a0 * b1;
+                sum += a1 * b0;
+                sum += a1 * b1;
             }
-
-            Crow[jdx] = sum;
+ 
+            matC[idx][jdx] = sum;
         }
     }
-
+ 
     double totaltime = elapsed_time();
  
     /* Step 4: Output */

@@ -44,8 +44,8 @@ double integrate (int num_threads, int samples, int a, int b, double (*f)(double
     int width = (b - a);
     
 
-    //if(num_threads < 1 || samples < 1 || a >= b || a == b){return 0.0;}
-    //if(f == NULL){return 0.0;}
+    if(num_threads < 1 || samples < 1 || a >= b || a == b){return 0.0;}
+    if(f == NULL){return 0.0;}
 
     #pragma omp parallel num_threads(num_threads)
     {
