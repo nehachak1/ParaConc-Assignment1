@@ -49,33 +49,26 @@ int main(int argc, char *argv[]) {
  
     omp_set_num_threads(num_threads);
  
-    #pragma omp parallel for collapse(2)
+    #pragma omp parallel for schedule(static)
     for(int idx = 0; idx < M/2; idx++) {
         for(int jdx = 0; jdx < K/2; jdx++) {
- 
+
             int *A0 = matA[2*idx];
             int *A1 = matA[2*idx + 1];
- 
+
             int col0 = 2*jdx;
             int col1 = col0 + 1;
- 
+
             int sum = 0;
- 
-            #pragma omp simd reduction(+:sum)
+
             for(int kdx = 0; kdx < N; kdx++) {
- 
-                int a0 = A0[kdx];
-                int a1 = A1[kdx];
- 
-                int b0 = matB[kdx][col0];
-                int b1 = matB[kdx][col1];
- 
-                sum += a0 * b0;
-                sum += a0 * b1;
-                sum += a1 * b0;
-                sum += a1 * b1;
+
+                int a = A0[kdx] + A1[kdx];
+                int b = matB[kdx][col0] + matB[kdx][col1];
+
+                sum += a * b;
             }
- 
+
             matC[idx][jdx] = sum;
         }
     }
