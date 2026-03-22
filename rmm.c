@@ -43,36 +43,51 @@ int main(int argc, char *argv[]) {
         display_matrix(matB, N, K, "B");
     }
  
-    /* Step 3: Optimized RMM computation */
+    /* Step 3: Optimized RMM computation with blocking to reduce true sharing */
     printf("Starting Computation...\n");
     set_clock();
     omp_set_num_threads(num_threads);
 
-    #pragma omp parallel for schedule(static)
-    for(int idx = 0; idx < M/2; idx++) {
-        for(int jdx = 0; jdx < K/2; jdx++) {
+    // Use tile-based blocking to reduce true sharing:
+    // Each thread computes a contiguous block of matC elements
+    // rather than scattered individual elements
+    int BLOCK_SIZE = 16;  // Cache-friendly block size
+    
+    #pragma omp parallel for collapse(2) //schedule(dynamic, 2)
+    for(int bj = 0; bj < K/2; bj += BLOCK_SIZE) {
+        for(int bi = 0; bi < M/2; bi += BLOCK_SIZE) {
+        
+            
+            // Each thread processes a BLOCK_SIZE x BLOCK_SIZE region
+            int i_end = (bi + BLOCK_SIZE < M/2) ? bi + BLOCK_SIZE : M/2;
+            int j_end = (bj + BLOCK_SIZE < K/2) ? bj + BLOCK_SIZE : K/2;
+            
+            for(int idx = bi; idx < i_end; idx++) {
+                for(int jdx = bj; jdx < j_end; jdx++) {
+                    
+                    int *A0 = matA[idx*2];
+                    int *A1 = matA[idx*2 + 1];
 
-            int sum = 0;
+                    int col0 = jdx*2;
+                    int col1 = jdx*2 + 1;
 
-            int *A0 = matA[idx*2];
-            int *A1 = matA[idx*2 + 1];
-
-            int col0 = jdx*2;
-            int col1 = jdx*2 + 1;
-
-            for(int aoff = 0; aoff < 2; aoff++) {
-                int *Arow = (aoff == 0) ? A0 : A1;
-
-                for(int boff = 0; boff < 2; boff++) {
-                    int col = (boff == 0) ? col0 : col1;
-
+                    // Single-pass computation with excellent cache reuse
+                    int sum = 0;
                     for(int kdx = 0; kdx < N; kdx++) {
-                        sum += Arow[kdx] * matB[kdx][col];
+                        int a0_val = A0[kdx];
+                        int a1_val = A1[kdx];
+                        int b_col0 = matB[kdx][col0];
+                        int b_col1 = matB[kdx][col1];
+                        
+                        sum += a0_val * b_col0;
+                        sum += a0_val * b_col1;
+                        sum += a1_val * b_col0;
+                        sum += a1_val * b_col1;
                     }
+
+                    matC[idx][jdx] = sum;
                 }
             }
-
-            matC[idx][jdx] = sum;
         }
     }
  
