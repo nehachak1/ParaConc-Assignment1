@@ -46,27 +46,30 @@ int main(int argc, char *argv[]) {
     /* Step 3: Optimized RMM computation */
     printf("Starting Computation...\n");
     set_clock();
- 
     omp_set_num_threads(num_threads);
- 
+
     #pragma omp parallel for schedule(static)
     for(int idx = 0; idx < M/2; idx++) {
         for(int jdx = 0; jdx < K/2; jdx++) {
 
-            int *A0 = matA[2*idx];
-            int *A1 = matA[2*idx + 1];
-
-            int col0 = 2*jdx;
-            int col1 = col0 + 1;
-
             int sum = 0;
 
-            for(int kdx = 0; kdx < N; kdx++) {
+            int *A0 = matA[idx*2];
+            int *A1 = matA[idx*2 + 1];
 
-                int a = A0[kdx] + A1[kdx];
-                int b = matB[kdx][col0] + matB[kdx][col1];
+            int col0 = jdx*2;
+            int col1 = jdx*2 + 1;
 
-                sum += a * b;
+            for(int aoff = 0; aoff < 2; aoff++) {
+                int *Arow = (aoff == 0) ? A0 : A1;
+
+                for(int boff = 0; boff < 2; boff++) {
+                    int col = (boff == 0) ? col0 : col1;
+
+                    for(int kdx = 0; kdx < N; kdx++) {
+                        sum += Arow[kdx] * matB[kdx][col];
+                    }
+                }
             }
 
             matC[idx][jdx] = sum;
