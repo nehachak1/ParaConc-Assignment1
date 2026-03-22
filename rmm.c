@@ -49,35 +49,33 @@ int main(int argc, char *argv[]) {
     omp_set_num_threads(num_threads);
 
     // Use tile-based blocking to reduce true sharing:
-    // Each thread computes a contiguous block of matC elements
-    // rather than scattered individual elements
+    
     int BLOCK_SIZE = 16;  // Cache-friendly block size
     
-    #pragma omp parallel for collapse(2) //schedule(dynamic, 2)
-    for(int bj = 0; bj < K/2; bj += BLOCK_SIZE) {
-        for(int bi = 0; bi < M/2; bi += BLOCK_SIZE) {
+    #pragma omp parallel for collapse(2) 
+    for(int i = 0; i < M/2; i += BLOCK_SIZE) {
+        for(int j = 0; j < K/2; j += BLOCK_SIZE) {
         
             
             // Each thread processes a BLOCK_SIZE x BLOCK_SIZE region
-            int i_end = (bi + BLOCK_SIZE < M/2) ? bi + BLOCK_SIZE : M/2;
-            int j_end = (bj + BLOCK_SIZE < K/2) ? bj + BLOCK_SIZE : K/2;
+            int i_end = (i + BLOCK_SIZE < M/2) ? i + BLOCK_SIZE : M/2;
+            int j_end = (j + BLOCK_SIZE < K/2) ? j + BLOCK_SIZE : K/2;
             
-            for(int idx = bi; idx < i_end; idx++) {
-                for(int jdx = bj; jdx < j_end; jdx++) {
+            for(int i1 = i; i1 < i_end; i1++) {
+                for(int j1 = j; j1 < j_end; j1++) {
                     
-                    int *A0 = matA[idx*2];
-                    int *A1 = matA[idx*2 + 1];
+                    int *A0 = matA[i1*2];
+                    int *A1 = matA[i1*2 + 1];
 
-                    int col0 = jdx*2;
-                    int col1 = jdx*2 + 1;
+                    int col0 = j1*2;
+                    int col1 = j1*2 + 1;
 
-                    // Single-pass computation with excellent cache reuse
                     int sum = 0;
-                    for(int kdx = 0; kdx < N; kdx++) {
-                        int a0_val = A0[kdx];
-                        int a1_val = A1[kdx];
-                        int b_col0 = matB[kdx][col0];
-                        int b_col1 = matB[kdx][col1];
+                    for(int k = 0; k < N; k++) {
+                        int a0_val = A0[k];
+                        int a1_val = A1[k];
+                        int b_col0 = matB[k][col0];
+                        int b_col1 = matB[k][col1];
                         
                         sum += a0_val * b_col0;
                         sum += a0_val * b_col1;
@@ -85,7 +83,7 @@ int main(int argc, char *argv[]) {
                         sum += a1_val * b_col1;
                     }
 
-                    matC[idx][jdx] = sum;
+                    matC[i1][j1] = sum;
                 }
             }
         }
