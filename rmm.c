@@ -43,21 +43,17 @@ int main(int argc, char *argv[]) {
         display_matrix(matB, N, K, "B");
     }
  
-    /* Step 3: Optimized RMM computation with blocking to reduce true sharing */
     printf("Starting Computation...\n");
     set_clock();
     omp_set_num_threads(num_threads);
 
-    // Use tile-based blocking to reduce true sharing:
     
-    int BLOCK_SIZE = 16;  // Cache-friendly block size
+    int BLOCK_SIZE = 16;  
     
     #pragma omp parallel for collapse(2) 
     for(int i = 0; i < M/2; i += BLOCK_SIZE) {
         for(int j = 0; j < K/2; j += BLOCK_SIZE) {
         
-            
-            // Each thread processes a BLOCK_SIZE x BLOCK_SIZE region
             int i_end = (i + BLOCK_SIZE < M/2) ? i + BLOCK_SIZE : M/2;
             int j_end = (j + BLOCK_SIZE < K/2) ? j + BLOCK_SIZE : K/2;
             
